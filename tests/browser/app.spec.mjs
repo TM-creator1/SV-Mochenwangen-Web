@@ -35,6 +35,34 @@ test('navigation, browser history, installation instructions and provider errors
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+test('loaded magazine can be left through the menu and revisited with browser history', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('./#magazine');
+  const magazine = page.locator('[data-screen="magazine"]');
+  await expect(magazine.locator('.pdf-page canvas').first()).toBeVisible();
+  await page.locator('#open-menu').click();
+  await page.locator('[data-page="youth"]').click();
+  await expect(page).toHaveURL(/#youth$/);
+  await expect(magazine).toBeHidden();
+  await expect(page.locator('[data-screen="youth"]')).toBeVisible();
+  await expect(page.locator('.screen:visible')).toHaveCount(1);
+  await page.goBack();
+  await expect(magazine).toBeVisible();
+  await expect(magazine.locator('.pdf-page canvas').first()).toBeVisible();
+  await page.locator('#open-menu').click();
+  await page.locator('[data-page="first-standings"]').click();
+  await expect(magazine).toBeHidden();
+  await expect(page.locator('[data-screen="first-standings"]')).toBeVisible();
+  await page.locator('#open-menu').click();
+  await page.locator('[data-page="home"]').click();
+  await expect(page.locator('[data-screen="home"]')).toBeVisible();
+  await page.getByRole('button', { name: '1. Liveticker', exact: true }).click();
+  await expect(page.locator('[data-screen="first-ticker"]')).toBeVisible();
+  await expect(page.locator('.screen:visible')).toHaveCount(1);
+  expect(errors).toEqual([]);
+});
+
 test.describe('offline support', () => {
 test.use({ serviceWorkers: 'allow' });
 test('stadium magazine renders, scrolls and remains available offline', async ({ page, context }) => {

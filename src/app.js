@@ -63,7 +63,8 @@ function showPage() {
   document.querySelectorAll('[data-tab]').forEach(button => {
     if (button.dataset.tab === homeTab) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
   });
-  document.querySelectorAll('[data-page]').forEach(button => {
+  // PDF pages also use data-page; only menu buttons represent destinations.
+  $('club-menu').querySelectorAll('button[data-page]').forEach(button => {
     const selected = button.dataset.page === destination;
     button.querySelector('.check').textContent = selected ? '✓' : '';
     if (selected) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
