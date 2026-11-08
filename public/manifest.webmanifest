@@ -1,0 +1,22 @@
+{
+  "id": "/SV-Mochenwangen-Web/",
+  "name": "SV Mochenwangen",
+  "short_name": "SV Mochenwangen",
+  "description": "Vereinsnews, FuPa-Liveticker, Spiele, Tabellen und Stadionheft des SV Mochenwangen.",
+  "lang": "de-DE",
+  "start_url": "/SV-Mochenwangen-Web/",
+  "scope": "/SV-Mochenwangen-Web/",
+  "display": "standalone",
+  "background_color": "#db0f0f",
+  "theme_color": "#db0f0f",
+  "categories": ["sports", "news"],
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Stadionheft", "url": "./#magazine" },
+    { "name": "1. Mannschaft – Spiele", "url": "./#first-matches" }
+  ]
+}

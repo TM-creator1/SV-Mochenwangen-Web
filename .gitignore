@@ -1,0 +1,15 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+reports/*.json
+reports/*.png
+.npm-cache/
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
