@@ -31,10 +31,22 @@ function notify(state) {
 }
 if (!team || !kind) { notify('error'); }
 else {
+  const modernStandings = team.id === 'second' && params.get('kind') === 'standings';
   const widget = document.createElement('div');
   widget.className = 'fupa_widget';
   widget.dataset.widget = JSON.stringify({ type: 'team_widget', type_values: [kind.value], value: team.fupaId, selected_tab: 1 });
   const content = document.createElement('div'); content.id = 'widget-content'; widget.append(content);
+  if (modernStandings) {
+    widget.removeAttribute('class');
+    widget.removeAttribute('data-widget');
+    const root = document.createElement('div');
+    root.id = 'fp-widget_root-3LyQXZyHVf25y5SbbWNvnopNp36';
+    const link = document.createElement('a');
+    link.href = 'https://www.fupa.net/club/sv-blitzenreute';
+    link.target = '_blank'; link.rel = 'noopener';
+    link.textContent = 'SV Blitzenreute auf FuPa';
+    root.append(link); content.append(root);
+  }
   for (const [href, text, className] of [[`https://www.fupa.net/team/${team.slug}`, 'Auf FuPa öffnen', 'widget_link'], ['https://www.fupa.net/widget.html', '© FuPa-Widget', 'widget_copy']]) {
     const link = document.createElement('a'); link.href = href; link.textContent = text; link.className = className; link.target = '_blank'; link.rel = 'noopener noreferrer'; widget.append(link);
   }
@@ -44,7 +56,7 @@ else {
     updateLinks();
     const text = content.textContent;
     if (/Website nicht aktiviert|muss erst.*Vereinsverwaltung|Domain.*eingetragen werden/i.test(text)) notify('activation');
-    else if (content.querySelector('[class^="widget_team_widget_"], [class*="widget_team_widget_"], .widget_team_widget')) notify('ready');
+    else if (modernStandings ? content.querySelector('iframe, table, [id^="fp-widget_root-"] > :not(a)') : content.querySelector('[class^="widget_team_widget_"], [class*="widget_team_widget_"], .widget_team_widget')) notify('ready');
   });
   observer.observe(content, { childList: true, subtree: true });
   timeout = setTimeout(() => notify(navigator.onLine ? 'error' : 'offline'), 30000);
@@ -52,7 +64,9 @@ else {
   else {
     // Classic script embed, like iOS: no fetch(), module type or crossorigin.
     // FuPa then requests widget HTML using document.location.host for activation.
-    const script = document.createElement('script'); script.src = 'https://www.fupa.net/fupa/widget/fupa_widget.js';
+    const script = document.createElement('script'); script.src = modernStandings
+      ? 'https://widget-api.fupa.net/vendor/widget.js?v1'
+      : 'https://www.fupa.net/fupa/widget/fupa_widget.js';
     script.addEventListener('error', () => notify('error')); document.head.append(script);
   }
   // Keep future dynamically inserted widget links out of the sandboxed frame.

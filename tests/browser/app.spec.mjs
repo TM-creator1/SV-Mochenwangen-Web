@@ -108,7 +108,7 @@ test('stadium magazine renders, scrolls and remains available offline', async ({
 });
 
 test('FuPa activation and successful loading are reported to the app', async ({ page, context, baseURL }) => {
-  await context.route('https://www.fupa.net/fupa/widget/fupa_widget.js', route => route.fulfill({
+  await context.route(/^https:\/\/(?:www\.fupa\.net\/fupa\/widget\/fupa_widget\.js|widget-api\.fupa\.net\/vendor\/widget\.js\?v1)$/, route => route.fulfill({
     contentType: 'text/javascript',
     body: "document.getElementById('widget-content').textContent = 'Website nicht aktiviert';",
   }));
@@ -119,7 +119,7 @@ test('FuPa activation and successful loading are reported to the app', async ({ 
   await expect(widget.getByRole('link', { name: 'FuPa-Vereinsverwaltung öffnen ↗' })).toHaveAttribute('href', 'https://www.fupa.net/fupa/admin');
   await expect(widget.locator('script[src="https://www.fupa.net/fupa/widget/fupa_widget.js"]')).toHaveCount(1);
   expect(await widget.locator('script[src="https://www.fupa.net/fupa/widget/fupa_widget.js"]').getAttribute('crossorigin')).toBeNull();
-  await context.route('https://www.fupa.net/fupa/widget/fupa_widget.js', route => route.fulfill({
+  await context.route(/^https:\/\/(?:www\.fupa\.net\/fupa\/widget\/fupa_widget\.js|widget-api\.fupa\.net\/vendor\/widget\.js\?v1)$/, route => route.fulfill({
     contentType: 'text/javascript',
     body: "document.getElementById('widget-content').innerHTML = '<div class=\"widget_team_widget\">Spielplan</div>';",
   }));
@@ -129,7 +129,7 @@ test('FuPa activation and successful loading are reported to the app', async ({ 
 });
 
 test('FuPa activation offers the correct external team for all nine destinations', async ({ page, context }) => {
-  await context.route('https://www.fupa.net/fupa/widget/fupa_widget.js', route => route.fulfill({
+  await context.route(/^https:\/\/(?:www\.fupa\.net\/fupa\/widget\/fupa_widget\.js|widget-api\.fupa\.net\/vendor\/widget\.js\?v1)$/, route => route.fulfill({
     contentType: 'text/javascript',
     body: "document.getElementById('widget-content').innerHTML = '<div>Website nicht aktiviert. Die Domain muss erst in der FuPa Vereinsverwaltung eingetragen werden.</div>';",
   }));
