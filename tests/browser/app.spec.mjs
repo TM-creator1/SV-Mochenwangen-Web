@@ -117,11 +117,11 @@ test('FuPa activation and successful loading are reported to the app', async ({ 
   await expect(page.locator('[data-screen="first-matches"] .frame-status')).toContainText(new URL(baseURL).host);
   const widget = page.frameLocator('[data-screen="first-matches"] iframe');
   await expect(widget.getByRole('link', { name: 'FuPa-Vereinsverwaltung öffnen ↗' })).toHaveAttribute('href', 'https://www.fupa.net/fupa/admin');
-  await expect(widget.locator('script[src="https://www.fupa.net/fupa/widget/fupa_widget.js"]')).toHaveCount(1);
-  expect(await widget.locator('script[src="https://www.fupa.net/fupa/widget/fupa_widget.js"]').getAttribute('crossorigin')).toBeNull();
+  await expect(widget.locator('script[src="https://widget-api.fupa.net/vendor/widget.js?v1"]')).toHaveCount(1);
+  expect(await widget.locator('script[src="https://widget-api.fupa.net/vendor/widget.js?v1"]').getAttribute('crossorigin')).toBeNull();
   await context.route(/^https:\/\/(?:www\.fupa\.net\/fupa\/widget\/fupa_widget\.js|widget-api\.fupa\.net\/vendor\/widget\.js\?v1)$/, route => route.fulfill({
     contentType: 'text/javascript',
-    body: "document.getElementById('widget-content').innerHTML = '<div class=\"widget_team_widget\">Spielplan</div>';",
+    body: "document.querySelector('[id^=\"fp-widget_root-\"]').innerHTML = '<div>Spielplan</div>';",
   }));
   await page.locator('#reload').click();
   await expect(page.locator('[data-screen="first-matches"] .frame-status')).toBeHidden();

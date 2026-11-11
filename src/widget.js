@@ -32,15 +32,20 @@ function notify(state) {
 if (!team || !kind) { notify('error'); }
 else {
   const modernWidgets = {
+    first: {
+      standings: 'fp-widget_root-3Lybq0AyKEIjOqyeo558rbJzVrP',
+      matches: 'fp-widget_root-3Lyc7muGht8gjseG8Lm69AfLnBT',
+      ticker: 'fp-widget_root-3LycM6VyyQtMbXOmpkjwD89C6ue',
+    },
     second: {
-      standings: 'fp-widget_root-3LyQXZyHVf25y5SbbWNvnopNp36',
-      matches: 'fp-widget_root-3LySeijPyLYYxMMKfrSYVyegSUo',
-      ticker: 'fp-widget_root-3LySzw25yA6o4WMHDg9sg9pzbef',
+      standings: 'fp-widget_root-3LycU3RzBdWYQ0DGnapZfl2akPa',
+      matches: 'fp-widget_root-3Lycdy87AoAszyoAEpE4PVcOhFL',
+      ticker: 'fp-widget_root-3Lyclstr50V4jk9GNiYGnr615FF',
     },
     reserve: {
-      standings: 'fp-widget_root-3LyTKlFyguPBTcUxq3rsX9W1mJQ',
-      matches: 'fp-widget_root-3LyTWeh3DE6qyDLK7NoUPkyaDQt',
-      ticker: 'fp-widget_root-3LyThcc5hYLoEW8flifZSNgSpmF',
+      standings: 'fp-widget_root-3LycvxReEsfMGTSpYkl29L2x9kb',
+      matches: 'fp-widget_root-3Lyd5OBJSTssD9bD5jfPNfbcNkM',
+      ticker: 'fp-widget_root-3LydEmXq9aUKWh4wKCzxWHEqf2P',
     },
   };
   const modernWidgetId = modernWidgets[team.id]?.[params.get('kind')];
@@ -54,9 +59,9 @@ else {
     const root = document.createElement('div');
     root.id = modernWidgetId;
     const link = document.createElement('a');
-    link.href = 'https://www.fupa.net/club/sv-blitzenreute';
+    link.href = team.id === 'first' ? 'https://www.fupa.net/club/sv-mochenwangen' : 'https://www.fupa.net/club/sv-blitzenreute';
     link.target = '_blank'; link.rel = 'noopener';
-    link.textContent = 'SV Blitzenreute auf FuPa';
+    link.textContent = team.id === 'first' ? 'SV Mochenwangen auf FuPa' : 'SV Blitzenreute auf FuPa';
     root.append(link); content.append(root);
   }
   for (const [href, text, className] of [[`https://www.fupa.net/team/${team.slug}`, 'Auf FuPa öffnen', 'widget_link'], ['https://www.fupa.net/widget.html', '© FuPa-Widget', 'widget_copy']]) {
