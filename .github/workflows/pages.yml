@@ -3,6 +3,8 @@ name: Publish PWA to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '17 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -26,6 +28,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
+      - run: npm run update:magazine
       - run: npm run build
       - run: npm test
       - run: npx playwright install --with-deps chromium webkit

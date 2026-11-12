@@ -2,7 +2,7 @@ export const CLUB = {
   name: 'SV Mochenwangen', color: '#db0f0f',
   home: 'https://sv-mochenwangen.de/', youth: 'https://jsg-bmw.de/',
   magazine: './documents/stadionheft-2026-11-01.pdf',
-  magazineSource: 'https://sv-mochenwangen.de/fileadmin/user_upload/flado/SVM_Stadionheft_01.11.2026_klein.pdf',
+  magazineSource: 'https://sv-mochenwangen.de/fileadmin/user_upload/flado/SVM_Stadionheft_15.11.2026.pdf',
 };
 export const TEAMS = [
   { id: 'first', name: '1. Mannschaft', ticker: '1. Liveticker', fupaId: '1465070', slug: 'sv-mochenwangen-m1-2026-27' },

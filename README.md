@@ -47,3 +47,5 @@ App-Oberfläche und ein zuvor vollständig geladenes Stadionheft stehen offline 
 Stadionheft: `public/documents/stadionheft-2026-11-01.pdf`. Bei einer neuen Ausgabe Verweise in `src/config.js`, `src/app.js`, `src/magazine.js`, `scripts/build.mjs` und den Tests aktualisieren.
 
 Nicht enthalten: Android-/iOS-Projekte, lokale Konfigurationen, Diagnoseberichte, Zugangsdaten, `node_modules` und generiertes `dist`. Der öffentliche Inhalt umfasst die bewusst mitgelieferten Vereinsicons und das Stadionheft.
+
+Stadionheft: npm run update:magazine liest den aktuellen PDF-Link von https://sv-mochenwangen.de/ und speichert das Heft lokal fuer die Offline-Anzeige. GitHub Pages baut und veroeffentlicht bei Push auf main, manuell und alle sechs Stunden automatisch. Ein fehlender Link oder ein fehlgeschlagener Download stoppt die Veroeffentlichung; die bisherige Website bleibt bestehen. Der lokale PDF-Pfad bleibt aus Kompatibilitaetsgruenden unveraendert; Ausgabedatum und Original-Link stammen aus dem gefundenen Dateinamen.

@@ -13,8 +13,9 @@ export async function mountMagazine(root) {
   const rootElement = documentElement('div', 'magazine');
   const info = documentElement('div', 'magazine-info');
   const description = documentElement('p');
-  description.textContent = 'Stadionheft · 01.11.2026 · Alle Seiten untereinander. Zum Lesen nach unten scrollen.';
-  const download = documentElement('a'); download.href = CLUB.magazine; download.download = 'SVM-Stadionheft-01.11.2026.pdf'; download.textContent = 'PDF herunterladen';
+  const issue = decodeURIComponent(CLUB.magazineSource).match(/\d{2}\.\d{2}\.\d{4}/)?.[0];
+  description.textContent = 'Stadionheft - ' + (issue || 'Aktuelle Ausgabe') + ' - Alle Seiten untereinander. Zum Lesen nach unten scrollen.';
+  const download = documentElement('a'); download.href = CLUB.magazine; download.download = 'SVM-Stadionheft.pdf'; download.textContent = 'PDF herunterladen';
   const original = documentElement('a'); original.href = CLUB.magazineSource; original.target = '_blank'; original.rel = 'noopener noreferrer'; original.textContent = 'Original öffnen ↗';
   info.append(description, download, original);
   const progress = documentElement('div', 'magazine-progress'); progress.setAttribute('role', 'status'); progress.textContent = 'Stadionheft wird geladen …';
