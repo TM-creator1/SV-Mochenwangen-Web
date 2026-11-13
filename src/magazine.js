@@ -2,7 +2,7 @@ import { getDocument, GlobalWorkerOptions } from './vendor/pdfjs/pdf.mjs';
 import { CLUB } from './config.js';
 GlobalWorkerOptions.workerSrc = new URL('./vendor/pdfjs/pdf.worker.mjs', import.meta.url).href;
 
-export async function mountMagazine(root) {
+export async function mountMagazine(root, onReady = () => {}) {
   let disposed = false;
   let document;
   let rendering = false;
@@ -94,9 +94,10 @@ export async function mountMagazine(root) {
       page.style.setProperty('--page-ratio', `${size.width} / ${size.height}`);
       const label = documentElement('span', 'page-label'); label.textContent = `${number} / ${pdf.numPages}`; page.append(label); fragment.append(page);
     }
-    list.append(fragment); progress.hidden = true;
+    list.append(fragment); progress.hidden = true; onReady();
     for (const page of list.children) { observer.observe(page); releaseObserver.observe(page); }
   }).catch(error => {
+    onReady();
     if (!disposed) { progress.className = 'magazine-error'; progress.textContent = 'Das Stadionheft konnte nicht geladen werden. Bitte Internetverbindung prüfen und oben erneut laden. Alternativ „Original öffnen“ nutzen.'; console.warn('PDF:', error.message); }
   });
   const resize = new ResizeObserver(() => {

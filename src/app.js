@@ -57,14 +57,13 @@ function showPage() {
   $('page-subtitle').hidden = !page.subtitle || destination === 'home';
   $('page-subtitle').textContent = page.subtitle || '';
   $('home-tabs').hidden = destination !== 'home';
-  $('source-label').textContent = page.type === 'widget' ? 'FuPa · Saison 2026/27' : page.type === 'magazine' ? 'Ausgabe 01.11.2026' : page.id === 'youth' ? 'Jugend · JSG BMW' : 'Vereinswebsite';
+  $('source-label').textContent = page.type === 'widget' ? 'FuPa · Saison 2026/27' : page.type === 'magazine' ? 'Ausgabe ' + (decodeURIComponent(CLUB.magazineSource).match(/\d{2}\.\d{2}\.\d{4}/)?.[0] || 'Aktuell') : page.id === 'youth' ? 'Jugend · JSG BMW' : 'Vereinswebsite';
   $('source-link').href = page.url;
   $('source-link').textContent = page.type === 'widget' ? 'Auf FuPa öffnen ↗' : 'Extern öffnen ↗';
   document.querySelectorAll('[data-tab]').forEach(button => {
     if (button.dataset.tab === homeTab) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
   });
-  // PDF pages also use data-page; only menu buttons represent destinations.
-  $('club-menu').querySelectorAll('button[data-page]').forEach(button => {
+  $('club-menu').querySelectorAll('[data-page]').forEach(button => {
     const selected = button.dataset.page === destination;
     button.querySelector('.check').textContent = selected ? '✓' : '';
     if (selected) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
@@ -73,11 +72,6 @@ function showPage() {
   if (!screens.has(id)) screens.set(id, createScreen(page));
   screens.get(id).root.hidden = false;
   screens.get(id).visited = Date.now();
-  // Bound hidden browser sessions on phones; existing visible sessions retain scroll position.
-  if (screens.size > 4) {
-    const oldest = [...screens.entries()].filter(([key]) => key !== id).sort((a, b) => a[1].visited - b[1].visited)[0];
-    removeScreen(oldest[0]);
-  }
   document.title = `${page.title}${page.subtitle ? ` · ${page.subtitle}` : ''} | ${CLUB.name}`;
 }
 function removeScreen(id) {
@@ -85,19 +79,21 @@ function removeScreen(id) {
   screen.dispose?.(); clearTimeout(screen.timeout); screen.root.remove(); screens.delete(id);
 }
 function createScreen(page) {
-  const root = document.createElement('section'); root.className = 'screen'; root.dataset.screen = page.id;
+  const root = document.createElement('section'); root.className = 'screen'; root.dataset.screen = page.id; root.hidden = true;
   const screen = { root, url: page.url, visited: Date.now() };
+  screen.ready = new Promise(resolve => { screen.complete = resolve; });
   $('content').append(root);
   if (page.type === 'magazine') {
     root.innerHTML = '<div class="magazine-progress" role="status">Stadionheft wird geladen …</div>';
     import('./magazine.js').then(async ({ mountMagazine }) => {
       if (!root.isConnected) return;
-      const dispose = await mountMagazine(root);
+      const dispose = await mountMagazine(root, screen.complete);
       if (!root.isConnected) dispose(); else screen.dispose = dispose;
-    }).catch(() => { root.innerHTML = '<p class="magazine-error">Die PDF-Anzeige konnte nicht geladen werden. Bitte erneut laden oder die PDF über „Extern öffnen“ aufrufen.</p>'; });
+    }).catch(() => { screen.complete(); root.innerHTML = '<p class="magazine-error">Die PDF-Anzeige konnte nicht geladen werden. Bitte erneut laden oder die PDF über „Extern öffnen“ aufrufen.</p>'; });
     return screen;
   }
   if (page.type === 'external') {
+    screen.complete();
     root.innerHTML = '<div class="external-page"><div class="external-card"><img src="./icons/club-emblem.png" alt=""><h2>Unsere Jugend. JSG BMW.</h2><p>Alle Mannschaften, Neuigkeiten und Termine der Jugendspielgemeinschaft Blitzenreute, Mochenwangen und Wolpertswende.</p><p>Die Jugendwebsite öffnet sich in einem eigenen Browserfenster, da sie die Anzeige innerhalb anderer Websites blockiert.</p><a class="primary-button" href="https://jsg-bmw.de/" target="_blank" rel="noopener noreferrer">JSG BMW öffnen ↗</a></div></div>';
     return screen;
   }
@@ -111,8 +107,10 @@ function createScreen(page) {
   } else { iframe.src = page.url; iframe.allow = 'fullscreen'; }
   screen.iframe = iframe; screen.status = status;
   root.append(status, iframe);
-  iframe.addEventListener('load', () => { if (page.type !== 'widget') { clearTimeout(screen.timeout); status.hidden = true; } });
+  iframe.addEventListener('load', () => { if (page.type !== 'widget') { clearTimeout(screen.timeout); status.hidden = true; screen.complete(); } });
+  iframe.addEventListener('error', () => screen.complete());
   screen.timeout = setTimeout(() => {
+    screen.complete();
     status.hidden = false; status.dataset.state = 'error';
     status.textContent = 'Der Inhalt konnte nicht bestätigt werden. Bitte erneut laden oder über „Extern öffnen“ direkt aufrufen.';
   }, 35000);
@@ -123,6 +121,7 @@ window.addEventListener('message', (event) => {
   const screen = [...screens.values()].find(item => item.iframe?.contentWindow === event.source);
   if (!screen) return;
   clearTimeout(screen.timeout);
+  screen.complete();
   screen.status.hidden = event.data.state === 'ready';
   screen.status.dataset.state = event.data.state;
   screen.status.textContent = event.data.state === 'activation'
@@ -176,3 +175,22 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
 }
 $('apply-update').addEventListener('click', () => registration?.waiting?.postMessage({ type: 'SKIP_WAITING' }));
 syncHash();
+
+async function startLauncher() {
+  const launcher = document.createElement('div');
+  launcher.id = 'launcher';
+  launcher.innerHTML = '<img src="./icons/club-emblem.png" width="128" height="128" alt=""><h1>SV Mochenwangen</h1><p role="status">Seiten und Stadionheft werden geladen &hellip;</p><progress aria-label="Inhalte laden" value="0"></progress><span class="launcher-count"></span>';
+  document.body.append(launcher);
+  const app = document.querySelector('.app'); app.inert = true;
+  const ids = ['home', ...TEAMS.flatMap(team => Object.keys(KINDS).map(kind => team.id + '-' + kind)), 'magazine', 'youth'];
+  const progress = launcher.querySelector('progress'); progress.max = ids.length;
+  const count = launcher.querySelector('.launcher-count'); count.textContent = '0 / ' + ids.length;
+  const pending = ids.map(id => {
+    if (!screens.has(id)) screens.set(id, createScreen(resolvePage(id)));
+    return screens.get(id).ready.then(() => { progress.value += 1; count.textContent = progress.value + ' / ' + ids.length; });
+  });
+  let timeout;
+  await Promise.all([new Promise(resolve => setTimeout(resolve, 1000)), Promise.race([Promise.all(pending), new Promise(resolve => { timeout = setTimeout(resolve, 15000); })])]);
+  clearTimeout(timeout); launcher.remove(); app.inert = false;
+}
+startLauncher();

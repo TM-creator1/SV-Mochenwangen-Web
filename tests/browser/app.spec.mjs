@@ -156,3 +156,19 @@ test('FuPa activation offers the correct external team for all nine destinations
   await expect(popup.getByRole('heading')).toHaveText('FuPa-Mannschaft');
   await popup.close();
 });
+
+test('launcher preloads every view and retains pages across navigation', async ({ page }) => {
+  await page.goto('./');
+  await expect(page.locator('#launcher')).toBeVisible();
+  await expect(page.locator('#launcher progress')).toHaveAttribute('max', '12');
+  await expect(page.locator('#launcher')).toHaveCount(0);
+  await expect(page.locator('[data-screen]')).toHaveCount(12);
+  await expect(page.locator('[data-screen="magazine"] .pdf-page').first()).toBeAttached();
+  await page.evaluate(() => { window.savedHome = document.querySelector('[data-screen="home"] iframe'); });
+  for (const id of ['first-standings', 'second-matches', 'reserve-standings', 'magazine', 'home']) {
+    await page.locator('#open-menu').click();
+    await page.locator('[data-page="' + id + '"]').click();
+    await expect(page.locator('[data-screen="' + id + '"]')).toBeVisible();
+  }
+  expect(await page.evaluate(() => window.savedHome === document.querySelector('[data-screen="home"] iframe'))).toBe(true);
+});
