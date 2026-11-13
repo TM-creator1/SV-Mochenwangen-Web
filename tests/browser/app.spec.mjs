@@ -160,7 +160,9 @@ test('FuPa activation offers the correct external team for all nine destinations
 test('launcher closes after two seconds without preloading other pages', async ({ page }) => {
   const requests = [];
   page.on('request', request => requests.push(request.url()));
-  await page.clock.install();
+  const start = new Date('2026-11-13T12:00:00Z');
+  await page.clock.install({ time: start });
+  await page.clock.pauseAt(new Date(start.getTime() + 10000));
   await page.goto('./', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#launcher .launcher-spinner')).toBeVisible();
   await expect(page.locator('#launcher progress')).toHaveCount(0);
