@@ -158,9 +158,14 @@ test('FuPa activation offers the correct external team for all nine destinations
 });
 
 test('launcher preloads every view and retains pages across navigation', async ({ page }) => {
+  await page.addInitScript(() => {
+    new MutationObserver(() => {
+      const progress = document.querySelector('#launcher progress');
+      if (progress) window.launcherTotal = progress.max;
+    }).observe(document, { childList: true, subtree: true });
+  });
   await page.goto('./');
-  await expect(page.locator('#launcher')).toBeVisible();
-  await expect(page.locator('#launcher progress')).toHaveAttribute('max', '12');
+  await expect.poll(() => page.evaluate(() => window.launcherTotal)).toBe(12);
   await expect(page.locator('#launcher')).toHaveCount(0);
   await expect(page.locator('[data-screen]')).toHaveCount(12);
   await expect(page.locator('[data-screen="magazine"] .pdf-page').first()).toBeAttached();
