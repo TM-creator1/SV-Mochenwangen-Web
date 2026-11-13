@@ -19,6 +19,11 @@ self.addEventListener('fetch', event => {
   const canonical = new URL(url); canonical.search = ''; canonical.hash = '';
   const relative = canonical.pathname.slice(scope.pathname.length);
   const isDocument = relative.startsWith('documents/') && relative.endsWith('.pdf');
+  // Keep the cache write alive without delaying the response stream.
+  let finishCacheWrite;
+  let backgroundWrite = false;
+  const cacheWrite = new Promise(resolve => { finishCacheWrite = resolve; });
+  event.waitUntil(cacheWrite);
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     if (request.mode === 'navigate') {
@@ -35,8 +40,14 @@ self.addEventListener('fetch', event => {
     const response = await fetch(request);
     if (response.ok && (isDocument || relative.startsWith('vendor/') || SHELL.some(path => absolute(path) === canonical.href))) {
       // Do not make cache quota/storage restrictions prevent online reading.
-      try { await cache.put(canonical.href, response.clone()); } catch { /* Browser storage may be full. */ }
+      backgroundWrite = true;
+      const copy = response.clone();
+      cache.put(canonical.href, copy).catch(() => {}).finally(finishCacheWrite);
+      return response;
     }
     return response;
-  })());
+  })().finally(() => {
+    // For cache hits, navigations and failures there is no background write.
+    if (!backgroundWrite) finishCacheWrite();
+  }));
 });

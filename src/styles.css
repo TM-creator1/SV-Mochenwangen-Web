@@ -6,3 +6,5 @@ main{flex:1;min-height:0;position:relative;overflow:hidden;background:#fff}.scre
 @keyframes spin{to{transform:rotate(360deg)}}@media(min-width:760px){.menu-dialog{margin:auto;border-radius:18px;height:min(860px,90dvh)}.pdf-list{max-width:900px}.magazine-info{padding-inline:max(16px,calc((100% - 868px)/2))}.home-tabs button{flex:0 0 auto}.home-tabs{justify-content:center}}@media(prefers-reduced-motion:reduce){*,*::before{animation:none!important;scroll-behavior:auto!important}}
 
 #launcher{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px;background:#f44336;color:white;text-align:center}#launcher img{object-fit:contain}#launcher h1{font-size:24px;margin:0}.launcher-spinner{width:40px;height:40px;border:4px solid #ffffff55;border-top-color:white;border-radius:50%;animation:spin 1s linear infinite}
+
+.magazine-progress p{margin:0 0 10px;font-variant-numeric:tabular-nums}.magazine-progress progress{display:block;width:100%;height:12px;accent-color:var(--red)}

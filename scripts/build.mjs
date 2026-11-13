@@ -20,7 +20,7 @@ for (const folder of ['cmaps', 'standard_fonts', 'wasm', 'iccs']) {
 await cp(resolve(pdfjs, 'LICENSE'), resolve(vendor, 'LICENSE'));
 await writeFile(resolve(output, '.nojekyll'), '');
 await writeFile(resolve(output, 'build-info.json'), JSON.stringify({ app: 'SV Mochenwangen', version: '1.0.0', builtAt: new Date().toISOString() }, null, 2));
-const shell = ['./', './index.html', './widget.html', './manifest.webmanifest', './app.js', './config.js', './magazine.js', './styles.css', './widget.js', './widget.css', './icons/club-emblem.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './vendor/pdfjs/pdf.mjs', './vendor/pdfjs/pdf.worker.mjs'];
+const shell = ['./', './index.html', './widget.html', './manifest.webmanifest', './app.js', './config.js', './magazine.js', './magazine-download.js', './styles.css', './widget.js', './widget.css', './icons/club-emblem.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './vendor/pdfjs/pdf.mjs', './vendor/pdfjs/pdf.worker.mjs'];
 const hash = createHash('sha256');
 // PDF.js loads these lazily. Keep color conversion available on the first
 // offline visit even if the initial online request preceded worker activation.

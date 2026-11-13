@@ -1,5 +1,6 @@
 import { getDocument, GlobalWorkerOptions } from './vendor/pdfjs/pdf.mjs';
 import { CLUB } from './config.js';
+import { downloadMagazine } from './magazine-download.js';
 GlobalWorkerOptions.workerSrc = new URL('./vendor/pdfjs/pdf.worker.mjs', import.meta.url).href;
 
 export async function mountMagazine(root) {
@@ -8,6 +9,8 @@ export async function mountMagazine(root) {
   let rendering = false;
   let activeRender;
   let resizeTimer;
+  let task;
+  const controller = new AbortController();
   const nearby = new Set();
   const rendered = new Map();
   const rootElement = documentElement('div', 'magazine');
@@ -18,21 +21,44 @@ export async function mountMagazine(root) {
   const download = documentElement('a'); download.href = CLUB.magazine; download.download = 'SVM-Stadionheft.pdf'; download.textContent = 'PDF herunterladen';
   const original = documentElement('a'); original.href = CLUB.magazineSource; original.target = '_blank'; original.rel = 'noopener noreferrer'; original.textContent = 'Original öffnen ↗';
   info.append(description, download, original);
-  const progress = documentElement('div', 'magazine-progress'); progress.setAttribute('role', 'status'); progress.textContent = 'Stadionheft wird geladen …';
+  const progress = documentElement('div', 'magazine-progress');
+  const progressLabel = documentElement('p'); progressLabel.setAttribute('role', 'status');
+  progressLabel.textContent = 'Stadionheft wird geladen ...';
+  const progressBar = documentElement('progress'); progressBar.max = 100;
+  progressBar.setAttribute('aria-label', 'Stadionheft herunterladen');
+  progress.append(progressLabel, progressBar);
   const list = documentElement('div', 'pdf-list'); list.setAttribute('aria-label', 'Stadionheft, fortlaufende Seiten');
   rootElement.append(info, progress, list); root.replaceChildren(rootElement);
-  const task = getDocument({
-    url: new URL(CLUB.magazine, location.href).href,
-    cMapUrl: new URL('./vendor/pdfjs/cmaps/', import.meta.url).href, cMapPacked: true,
-    standardFontDataUrl: new URL('./vendor/pdfjs/standard_fonts/', import.meta.url).href,
-    wasmUrl: new URL('./vendor/pdfjs/wasm/', import.meta.url).href,
-    iccUrl: new URL('./vendor/pdfjs/iccs/', import.meta.url).href,
-    // A full same-origin request can be cached reliably for offline reading.
-    disableRange: true,
-  });
-  task.onProgress = ({ loaded, total }) => {
-    if (!disposed && total) progress.textContent = `Stadionheft wird geladen … ${Math.min(100, Math.round(loaded / total * 100))} %`;
-  };
+  async function loadPdf() {
+    const data = await downloadMagazine(new URL(CLUB.magazine, location.href).href, {
+      signal: controller.signal,
+      onProgress: ({ loaded, total, done }) => {
+        if (disposed) return;
+        const mb = bytes => (bytes / 1000000).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        if (total) {
+          const percent = done ? 100 : Math.min(99.9, Math.floor(loaded / total * 1000) / 10);
+          progressBar.value = percent;
+          progressLabel.textContent = 'Stadionheft laden: ' + percent.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' % (' + mb(loaded) + ' / ' + mb(total) + ' MB)';
+        } else {
+          progressBar.removeAttribute('value');
+          progressLabel.textContent = 'Stadionheft laden: ' + mb(loaded) + ' MB';
+        }
+        if (done) {
+          progressBar.value = 100;
+          progressLabel.textContent = 'Download 100 % - erste Seite wird vorbereitet ...';
+        }
+      },
+    });
+    if (disposed) throw new DOMException('Abgebrochen', 'AbortError');
+    task = getDocument({
+      data,
+      cMapUrl: new URL('./vendor/pdfjs/cmaps/', import.meta.url).href, cMapPacked: true,
+      standardFontDataUrl: new URL('./vendor/pdfjs/standard_fonts/', import.meta.url).href,
+      wasmUrl: new URL('./vendor/pdfjs/wasm/', import.meta.url).href,
+      iccUrl: new URL('./vendor/pdfjs/iccs/', import.meta.url).href,
+    });
+    return task.promise;
+  }
   const observer = new IntersectionObserver(entries => {
     for (const entry of entries) {
       const page = Number(entry.target.dataset.page);
@@ -69,7 +95,7 @@ export async function mountMagazine(root) {
       activeRender = page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport, background: '#fff' });
       await activeRender.promise;
       if (disposed || !nearby.has(number)) { canvas.width = 0; return; }
-      element.prepend(canvas); element.dataset.rendered = 'true'; rendered.set(number, canvas);
+      element.prepend(canvas); progress.hidden = true; element.dataset.rendered = 'true'; rendered.set(number, canvas);
       page.cleanup();
     } catch (error) {
       if (!disposed && error.name !== 'RenderingCancelledException') {
@@ -80,7 +106,7 @@ export async function mountMagazine(root) {
       if (canvas) canvas.width = 0;
     } finally { activeRender = null; rendering = false; if (!disposed) setTimeout(pump, 0); }
   }
-  task.promise.then(async pdf => {
+  loadPdf().then(async pdf => {
     if (disposed) return;
     document = pdf;
     const first = await pdf.getPage(1);
@@ -94,18 +120,18 @@ export async function mountMagazine(root) {
       page.style.setProperty('--page-ratio', `${size.width} / ${size.height}`);
       const label = documentElement('span', 'page-label'); label.textContent = `${number} / ${pdf.numPages}`; page.append(label); fragment.append(page);
     }
-    list.append(fragment); progress.hidden = true;
+    list.append(fragment);
     for (const page of list.children) { observer.observe(page); releaseObserver.observe(page); }
   }).catch(error => {
 
-    if (!disposed) { progress.className = 'magazine-error'; progress.textContent = 'Das Stadionheft konnte nicht geladen werden. Bitte Internetverbindung prüfen und oben erneut laden. Alternativ „Original öffnen“ nutzen.'; console.warn('PDF:', error.message); }
+    if (!disposed) { progress.hidden = false; progress.className = 'magazine-error'; progress.textContent = 'Das Stadionheft konnte nicht geladen werden. Bitte Internetverbindung prüfen und oben erneut laden. Alternativ „Original öffnen“ nutzen.'; console.warn('PDF:', error.message); }
   });
   const resize = new ResizeObserver(() => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => { if (disposed) return; for (const number of [...rendered.keys()]) release(number); pump(); }, 250);
   });
   resize.observe(list);
-  return () => { disposed = true; clearTimeout(resizeTimer); observer.disconnect(); releaseObserver.disconnect(); resize.disconnect(); activeRender?.cancel(); for (const number of [...rendered.keys()]) release(number); task.destroy().catch(() => {}); };
+  return () => { disposed = true; controller.abort(); clearTimeout(resizeTimer); observer.disconnect(); releaseObserver.disconnect(); resize.disconnect(); activeRender?.cancel(); for (const number of [...rendered.keys()]) release(number); task?.destroy().catch(() => {}); };
 }
 function documentElement(tag, className) {
   const element = document.createElement(tag); if (className) element.className = className; return element;

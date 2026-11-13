@@ -176,3 +176,26 @@ test('launcher closes after two seconds without preloading other pages', async (
   await page.locator('[data-page="first-matches"]').click();
   await expect(page.locator('[data-screen="first-matches"]')).toBeVisible();
 });
+
+
+test('magazine shows received byte progress while a download is still running', async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch;
+    window.fetch = (url, options) => {
+      if (String(url).includes('/documents/') && String(url).includes('.pdf')) {
+        return Promise.resolve(new Response(new ReadableStream({ start(controller) {
+          controller.enqueue(new Uint8Array(25));
+          window.nextMagazineChunk = () => controller.enqueue(new Uint8Array(25));
+        } }), { headers: { 'Content-Length': '100', 'Content-Type': 'application/pdf' } }));
+      }
+      return originalFetch(url, options);
+    };
+  });
+  await page.goto('./#magazine');
+  const progress = page.locator('.magazine-progress progress');
+  await expect(progress).toHaveAttribute('value', '25');
+  await expect(page.locator('.magazine-progress')).toContainText('25,0 %');
+  await page.evaluate(() => window.nextMagazineChunk());
+  await expect(progress).toHaveAttribute('value', '50');
+  await expect(page.locator('.magazine-progress')).toContainText('50,0 %');
+});
