@@ -157,23 +157,20 @@ test('FuPa activation offers the correct external team for all nine destinations
   await popup.close();
 });
 
-test('launcher preloads every view and retains pages across navigation', async ({ page }) => {
-  await page.addInitScript(() => {
-    new MutationObserver(() => {
-      const progress = document.querySelector('#launcher progress');
-      if (progress) window.launcherTotal = progress.max;
-    }).observe(document, { childList: true, subtree: true });
-  });
-  await page.goto('./');
-  await expect.poll(() => page.evaluate(() => window.launcherTotal)).toBe(12);
+test('launcher closes after two seconds without preloading other pages', async ({ page }) => {
+  const requests = [];
+  page.on('request', request => requests.push(request.url()));
+  await page.clock.install();
+  await page.goto('./', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#launcher .launcher-spinner')).toBeVisible();
+  await expect(page.locator('#launcher progress')).toHaveCount(0);
+  await page.clock.runFor(1900);
+  await expect(page.locator('#launcher')).toBeVisible();
+  await page.clock.runFor(200);
   await expect(page.locator('#launcher')).toHaveCount(0);
-  await expect(page.locator('[data-screen]')).toHaveCount(12);
-  await expect(page.locator('[data-screen="magazine"] .pdf-page').first()).toBeAttached();
-  await page.evaluate(() => { window.savedHome = document.querySelector('[data-screen="home"] iframe'); });
-  for (const id of ['first-standings', 'second-matches', 'reserve-standings', 'magazine', 'home']) {
-    await page.locator('#open-menu').click();
-    await page.locator('[data-page="' + id + '"]').click();
-    await expect(page.locator('[data-screen="' + id + '"]')).toBeVisible();
-  }
-  expect(await page.evaluate(() => window.savedHome === document.querySelector('[data-screen="home"] iframe'))).toBe(true);
+  await expect(page.locator('[data-screen]')).toHaveCount(1);
+  expect(requests.some(url => /widget.html|stadionheft.*\.pdf/.test(url))).toBe(false);
+  await page.locator('#open-menu').click();
+  await page.locator('[data-page="first-matches"]').click();
+  await expect(page.locator('[data-screen="first-matches"]')).toBeVisible();
 });

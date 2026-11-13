@@ -72,6 +72,11 @@ function showPage() {
   if (!screens.has(id)) screens.set(id, createScreen(page));
   screens.get(id).root.hidden = false;
   screens.get(id).visited = Date.now();
+  // Limit background views on phones.
+  if (screens.size > 4) {
+    const oldest = [...screens.entries()].filter(([key]) => key !== id).sort((a, b) => a[1].visited - b[1].visited)[0];
+    removeScreen(oldest[0]);
+  }
   document.title = `${page.title}${page.subtitle ? ` · ${page.subtitle}` : ''} | ${CLUB.name}`;
 }
 function removeScreen(id) {
@@ -81,19 +86,18 @@ function removeScreen(id) {
 function createScreen(page) {
   const root = document.createElement('section'); root.className = 'screen'; root.dataset.screen = page.id; root.hidden = true;
   const screen = { root, url: page.url, visited: Date.now() };
-  screen.ready = new Promise(resolve => { screen.complete = resolve; });
   $('content').append(root);
   if (page.type === 'magazine') {
     root.innerHTML = '<div class="magazine-progress" role="status">Stadionheft wird geladen …</div>';
     import('./magazine.js').then(async ({ mountMagazine }) => {
       if (!root.isConnected) return;
-      const dispose = await mountMagazine(root, screen.complete);
+      const dispose = await mountMagazine(root);
       if (!root.isConnected) dispose(); else screen.dispose = dispose;
-    }).catch(() => { screen.complete(); root.innerHTML = '<p class="magazine-error">Die PDF-Anzeige konnte nicht geladen werden. Bitte erneut laden oder die PDF über „Extern öffnen“ aufrufen.</p>'; });
+    }).catch(() => { root.innerHTML = '<p class="magazine-error">Die PDF-Anzeige konnte nicht geladen werden. Bitte erneut laden oder die PDF über „Extern öffnen“ aufrufen.</p>'; });
     return screen;
   }
   if (page.type === 'external') {
-    screen.complete();
+
     root.innerHTML = '<div class="external-page"><div class="external-card"><img src="./icons/club-emblem.png" alt=""><h2>Unsere Jugend. JSG BMW.</h2><p>Alle Mannschaften, Neuigkeiten und Termine der Jugendspielgemeinschaft Blitzenreute, Mochenwangen und Wolpertswende.</p><p>Die Jugendwebsite öffnet sich in einem eigenen Browserfenster, da sie die Anzeige innerhalb anderer Websites blockiert.</p><a class="primary-button" href="https://jsg-bmw.de/" target="_blank" rel="noopener noreferrer">JSG BMW öffnen ↗</a></div></div>';
     return screen;
   }
@@ -107,10 +111,9 @@ function createScreen(page) {
   } else { iframe.src = page.url; iframe.allow = 'fullscreen'; }
   screen.iframe = iframe; screen.status = status;
   root.append(status, iframe);
-  iframe.addEventListener('load', () => { if (page.type !== 'widget') { clearTimeout(screen.timeout); status.hidden = true; screen.complete(); } });
-  iframe.addEventListener('error', () => screen.complete());
+  iframe.addEventListener('load', () => { if (page.type !== 'widget') { clearTimeout(screen.timeout); status.hidden = true; } });
   screen.timeout = setTimeout(() => {
-    screen.complete();
+
     status.hidden = false; status.dataset.state = 'error';
     status.textContent = 'Der Inhalt konnte nicht bestätigt werden. Bitte erneut laden oder über „Extern öffnen“ direkt aufrufen.';
   }, 35000);
@@ -121,7 +124,7 @@ window.addEventListener('message', (event) => {
   const screen = [...screens.values()].find(item => item.iframe?.contentWindow === event.source);
   if (!screen) return;
   clearTimeout(screen.timeout);
-  screen.complete();
+
   screen.status.hidden = event.data.state === 'ready';
   screen.status.dataset.state = event.data.state;
   screen.status.textContent = event.data.state === 'activation'
@@ -176,21 +179,13 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
 $('apply-update').addEventListener('click', () => registration?.waiting?.postMessage({ type: 'SKIP_WAITING' }));
 syncHash();
 
-async function startLauncher() {
+function startLauncher() {
   const launcher = document.createElement('div');
   launcher.id = 'launcher';
-  launcher.innerHTML = '<img src="./icons/club-emblem.png" width="128" height="128" alt=""><h1>SV Mochenwangen</h1><p role="status">Seiten und Stadionheft werden geladen &hellip;</p><progress aria-label="Inhalte laden" value="0"></progress><span class="launcher-count"></span>';
+  launcher.innerHTML = '<img src="./icons/club-emblem.png" width="128" height="128" alt=""><h1>SV Mochenwangen</h1><span class="launcher-spinner" role="status" aria-label="App startet"></span>';
   document.body.append(launcher);
-  const app = document.querySelector('.app'); app.inert = true;
-  const ids = ['home', ...TEAMS.flatMap(team => Object.keys(KINDS).map(kind => team.id + '-' + kind)), 'magazine', 'youth'];
-  const progress = launcher.querySelector('progress'); progress.max = ids.length;
-  const count = launcher.querySelector('.launcher-count'); count.textContent = '0 / ' + ids.length;
-  const pending = ids.map(id => {
-    if (!screens.has(id)) screens.set(id, createScreen(resolvePage(id)));
-    return screens.get(id).ready.then(() => { progress.value += 1; count.textContent = progress.value + ' / ' + ids.length; });
-  });
-  let timeout;
-  await Promise.all([new Promise(resolve => setTimeout(resolve, 1000)), Promise.race([Promise.all(pending), new Promise(resolve => { timeout = setTimeout(resolve, 15000); })])]);
-  clearTimeout(timeout); launcher.remove(); app.inert = false;
+  const app = document.querySelector('.app');
+  app.inert = true;
+  setTimeout(() => { launcher.remove(); app.inert = false; }, 2000);
 }
 startLauncher();
